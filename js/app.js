@@ -32,7 +32,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const x = setInterval(function() {
         // Lấy thời gian hiện tại
         const now = new Date().getTime();
-
+        console.log(now);
+        
         // Tính toán khoảng thời gian còn lại
         const distance = countDownDate - now;
 
