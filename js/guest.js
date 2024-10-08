@@ -14,18 +14,28 @@ export const guest = (() => {
         if (!until) {
             return;
         }
-
+    
         const count = (new Date(until)).getTime();
-
+    
         setInterval(() => {
-            const distance = Math.abs(count - (new Date()).getTime());
-
+            const distance = count - (new Date()).getTime();
+    
+            if (distance < 0) {
+                // Dừng đếm ngược khi thời gian đã đến
+                document.getElementById('day').innerText = "0";
+                document.getElementById('hour').innerText = "0";
+                document.getElementById('minute').innerText = "0";
+                document.getElementById('second').innerText = "0";
+                return; // Dừng hàm
+            }
+    
             document.getElementById('day').innerText = Math.floor(distance / (1000 * 60 * 60 * 24));
             document.getElementById('hour').innerText = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
             document.getElementById('minute').innerText = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
             document.getElementById('second').innerText = Math.floor((distance % (1000 * 60)) / 1000);
         }, 1000);
     };
+    
 
     const animation = () => {
         const duration = 15 * 1000;
