@@ -24,3 +24,33 @@ document.addEventListener('DOMContentLoaded', () => {
     window.comment = comment;
     window.pagination = pagination;
 });
+
+    // Thay đổi thời gian tại đây (ngày cưới)
+    const countDownDate = new Date("2024-11-02T12:30:00").getTime();
+
+    // Cập nhật đồng hồ đếm ngược mỗi giây
+    const x = setInterval(function() {
+        // Lấy thời gian hiện tại
+        const now = new Date().getTime();
+
+        // Tính toán khoảng thời gian còn lại
+        const distance = countDownDate - now;
+
+        // Tính toán ngày, giờ, phút và giây
+        const days = Math.floor(distance / (1000 * 60 * 60 * 24));
+        const hours = Math.floor((distance % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+        const minutes = Math.floor((distance % (1000 * 60 * 60)) / (1000 * 60));
+        const seconds = Math.floor((distance % (1000 * 60)) / 1000);
+
+        // Hiển thị kết quả trong các phần tử HTML
+        document.getElementById("day").innerHTML = days;
+        document.getElementById("hour").innerHTML = hours;
+        document.getElementById("minute").innerHTML = minutes;
+        document.getElementById("second").innerHTML = seconds;
+
+        // Nếu thời gian kết thúc, hiển thị thông báo
+        if (distance < 0) {
+            clearInterval(x);
+            document.getElementById("count-down").innerHTML = "Đến giờ cưới!";
+        }
+    }, 1000);
