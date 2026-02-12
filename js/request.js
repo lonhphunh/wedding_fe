@@ -48,6 +48,7 @@ export const request = (method, path) => {
 
     let url = document.body.getAttribute('data-url');
     const controller = new AbortController();
+    let silent = false;
     const req = {
         method: method,
         signal: controller.signal,
@@ -92,7 +93,9 @@ export const request = (method, path) => {
                 })
                 .catch((err) => {
                     const message = err.name === 'AbortError' ? 'Request timeout, please try again.' : err.message;
-                    alert(message);
+                    if (!silent) {
+                        alert(message);
+                    }
                     throw err;
                 })
                 .finally(() => {
@@ -135,9 +138,15 @@ export const request = (method, path) => {
 
                 })
                 .catch((err) => {
-                    alert(err.message || err);
+                    if (!silent) {
+                        alert(err.message || err);
+                    }
                     throw err;
                 });
+        },
+        silent(value = true) {
+            silent = value;
+            return this;
         },
         token(token) {
             if (session.isAdmin()) {
