@@ -48,7 +48,6 @@ export const request = (method, path) => {
 
     let url = document.body.getAttribute('data-url');
     const controller = new AbortController();
-    let silent = false;
     const req = {
         method: method,
         signal: controller.signal,
@@ -93,9 +92,7 @@ export const request = (method, path) => {
                 })
                 .catch((err) => {
                     const message = err.name === 'AbortError' ? 'Request timeout, please try again.' : err.message;
-                    if (!silent) {
-                        alert(message);
-                    }
+                    console.error('[request.send] failed', { method, path, message, error: err });
                     throw err;
                 })
                 .finally(() => {
@@ -138,9 +135,7 @@ export const request = (method, path) => {
 
                 })
                 .catch((err) => {
-                    if (!silent) {
-                        alert(err.message || err);
-                    }
+                    console.error('[request.download] failed', { method, path, error: err });
                     throw err;
                 });
         },
