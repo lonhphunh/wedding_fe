@@ -64,6 +64,7 @@ export const session = (() => {
     const guest = () => {
         progress.add();
         request(HTTP_GET, '/api/config')
+            .silent()
             .token(document.body.getAttribute('data-key'))
             .send()
             .then(async (res) => {

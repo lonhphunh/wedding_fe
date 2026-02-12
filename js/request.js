@@ -139,6 +139,10 @@ export const request = (method, path) => {
                     throw err;
                 });
         },
+        silent(value = true) {
+            silent = value;
+            return this;
+        },
         token(token) {
             if (session.isAdmin()) {
                 req.headers.append('Authorization', 'Bearer ' + token);
