@@ -2,15 +2,31 @@ import { guest } from './guest.js';
 
 export const progress = (() => {
 
+    const LOAD_TIMEOUT_MS = 10000;
+
     let info = null;
     let bar = null;
 
     let total = 0;
     let loaded = 0;
-    let valid = true;
     let push = true;
 
-    const onComplete = () => {
+    const settledAssets = new WeakSet();
+
+    const updateBar = (type, isError = false) => {
+        const percent = total > 0 ? Math.min((loaded / total) * 100, 100) : 100;
+        const label = isError ? 'Error loading' : 'Loading';
+
+        bar.style.width = `${percent}%`;
+        info.innerText = `${label} ${type} (${loaded}/${total}) [${Math.round(percent)}%]`;
+
+        if (isError) {
+            bar.style.backgroundColor = 'red';
+        }
+    };
+
+    const finish = () => {
+        updateBar('complete');
         guest.name();
     };
 
@@ -22,41 +38,59 @@ export const progress = (() => {
         total += 1;
     };
 
-    const complete = (type) => {
-        if (!valid) {
+    const settle = (type, isError = false) => {
+        loaded += 1;
+        updateBar(type, isError);
+
+        if (loaded >= total) {
+            finish();
+        }
+    };
+
+    const settleAsset = (asset, type, isError = false) => {
+        if (settledAssets.has(asset)) {
             return;
         }
 
-        loaded += 1;
-        bar.style.width = Math.min((loaded / total) * 100, 100).toString() + "%";
-        info.innerText = `Loading ${type} complete (${loaded}/${total}) [${parseInt((loaded / total) * 100).toFixed(0)}%]`;
+        settledAssets.add(asset);
+        settle(type, isError);
+    };
 
-        if (loaded === total) {
-            onComplete();
+    const complete = (type = 'asset') => {
+        settle(type);
+    };
+
+    const invalid = (type = 'asset') => {
+        settle(type, true);
+    };
+
+    const watchImage = (asset) => {
+        const timeout = window.setTimeout(() => {
+            settleAsset(asset, 'image timeout', true);
+        }, LOAD_TIMEOUT_MS);
+
+        const done = (isError) => {
+            window.clearTimeout(timeout);
+            settleAsset(asset, 'image', isError);
+        };
+
+        asset.addEventListener('load', () => done(false), { once: true });
+        asset.addEventListener('error', () => done(true), { once: true });
+
+        if (asset.complete) {
+            done(!(asset.naturalWidth > 0 && asset.naturalHeight > 0));
         }
     };
 
-    const invalid = (type) => {
-        info.innerText = `Error loading ${type} (${loaded}/${total}) [${parseInt((loaded / total) * 100).toFixed(0)}%]`;
-        bar.style.backgroundColor = 'red';
-        valid = false;
-    };
+    const run = () => {
+        const images = Array.from(document.querySelectorAll('img'));
 
-    const run = async () => {
-        document.querySelectorAll('img').forEach((asset) => {
-            asset.onerror = () => {
-                invalid('image');
-            };
-            asset.onload = () => {
-                complete('image');
-            };
+        if (images.length === 0) {
+            finish();
+            return;
+        }
 
-            if (asset.complete && asset.naturalWidth !== 0 && asset.naturalHeight !== 0) {
-                complete('image');
-            } else if (asset.complete) {
-                invalid('image');
-            }
-        });
+        images.forEach(watchImage);
     };
 
     const init = () => {
@@ -64,9 +98,20 @@ export const progress = (() => {
 
         info = document.getElementById('progress-info');
         bar = document.getElementById('progress-bar');
-        info.style.display = 'block';
 
+        if (!info || !bar) {
+            guest.name();
+            return;
+        }
+
+        info.style.display = 'block';
         push = false;
+
+        if (total === 0) {
+            finish();
+            return;
+        }
+
         run();
     };
 

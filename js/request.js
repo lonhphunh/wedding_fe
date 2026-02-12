@@ -7,11 +7,51 @@ export const HTTP_PUT = 'PUT';
 export const HTTP_PATCH = 'PATCH';
 export const HTTP_DELETE = 'DELETE';
 
+const DEFAULT_TIMEOUT_MS = 15000;
+
+const parseResponse = async (res) => {
+    const contentType = res.headers.get('content-type') ?? '';
+    const text = await res.text();
+
+    if (!text) {
+        return {};
+    }
+
+    if (contentType.includes('application/json')) {
+        return JSON.parse(text);
+    }
+
+    try {
+        return JSON.parse(text);
+    } catch {
+        return { message: text };
+    }
+};
+
+const toErrorMessage = (json, fallback) => {
+    if (!json) {
+        return fallback;
+    }
+
+    if (Array.isArray(json.error) && json.error.length > 0) {
+        return json.error[0];
+    }
+
+    if (Array.isArray(json) && json.length > 0) {
+        return json[0];
+    }
+
+    return json.message || fallback;
+};
+
 export const request = (method, path) => {
 
     let url = document.body.getAttribute('data-url');
-    let req = {
+    const controller = new AbortController();
+    let silent = false;
+    const req = {
         method: method,
+        signal: controller.signal,
         headers: new Headers({
             'Accept': 'application/json',
             'Content-Type': 'application/json'
@@ -29,19 +69,20 @@ export const request = (method, path) => {
          * @returns {Promise<ReturnType<typeof dto.baseResponse<T>>>}
          */
         send(transform = null) {
+            const timeout = window.setTimeout(() => {
+                controller.abort();
+            }, DEFAULT_TIMEOUT_MS);
+
             return fetch(url + path, req)
-                .then((res) => {
-                    return res.json().then((json) => {
-                        if (res.status >= 500 && (json.message || json[0])) {
-                            throw json.message || json[0];
-                        }
+                .then(async (res) => {
+                    const json = await parseResponse(res);
 
-                        if (json.error) {
-                            throw json.error[0];
-                        }
+                    if (!res.ok) {
+                        const fallback = `Request failed with status ${res.status}`;
+                        throw new Error(toErrorMessage(json, fallback));
+                    }
 
-                        return json;
-                    });
+                    return json;
                 })
                 .then((res) => {
                     if (transform) {
@@ -51,8 +92,14 @@ export const request = (method, path) => {
                     return dto.baseResponse(res.code, res.data, res.error);
                 })
                 .catch((err) => {
-                    alert(err);
+                    const message = err.name === 'AbortError' ? 'Request timeout, please try again.' : err.message;
+                    if (!silent) {
+                        alert(message);
+                    }
                     throw err;
+                })
+                .finally(() => {
+                    window.clearTimeout(timeout);
                 });
         },
         download() {
@@ -91,9 +138,15 @@ export const request = (method, path) => {
 
                 })
                 .catch((err) => {
-                    alert(err);
+                    if (!silent) {
+                        alert(err.message || err);
+                    }
                     throw err;
                 });
+        },
+        silent(value = true) {
+            silent = value;
+            return this;
         },
         token(token) {
             if (session.isAdmin()) {
